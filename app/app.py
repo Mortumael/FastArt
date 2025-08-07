@@ -39,32 +39,15 @@ init_db()
 
 # Функция для получения данных об акции
 def fetch_promo_data(promo_id):
-    url = f'https://apps.test-omni.hoff.ru/discount/v1/promo/{promo_id}'
-    headers = {
-        'Hoff-Business-Unit-Id': '799',
-        'Content-Type': 'application/json',
-        'traceparent': '00-26ece1a526f49cb7b45654d8253ccbc6-2ef0c451a304a1e5-01',
-        'Hoff-UserType': 'legal',
-        'Hoff-UserId': '19561435',
-        'Hoff-GuestId': 'b64890e8-86d5-4a1a-90c6-633fc9bddb49',
-        'Hoff-DeliveryZoneId': '5637179076',
-        'Hoff-BusinessUnitId': '799',
-        'Accept-Charset': 'UTF-8',
-        'Authorization': 'Bearer'
-    }
-
-    # Прокси через VPN
-    proxies = {
-        'http': 'https://f33224e08083.ngrok-free.app',
-        'https': 'https://f33224e08083.ngrok-free.app'
-    }
-
+    # Обрати внимание: сюда вставляешь свой ngrok-URL
+    internal_api_url = f'https://<ТВОЙ_NGROK>.ngrok-free.app/fetch_promo/{promo_id}'
+    
     try:
-        response = requests.get(url, headers=headers, proxies=proxies, verify=False)
+        response = requests.get(internal_api_url, verify=False)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching promo data: {e}")
+        print(f"Error fetching promo data via internal proxy: {e}")
         return None
 
 # Сохранение товаров в БД
