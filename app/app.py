@@ -1,86 +1,9 @@
 from flask import Flask, render_template, request, jsonify
-import sqlite3
 import requests
-import os
 
 app = Flask(__name__)
 
-# Инициализация БД
-def init_db():
-    db_exists = os.path.exists('database.db')
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    
-    # Проверяем существование таблицы
-    cursor.execute("""
-        SELECT name FROM sqlite_master 
-        WHERE type='table' AND name='products'
-    """)
-    table_exists = cursor.fetchone()
-    
-    if not table_exists:
-        cursor.execute('''
-            CREATE TABLE products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                productId TEXT NOT NULL,
-                promoId INTEGER NOT NULL,
-                name TEXT NOT NULL
-            )
-        ''')
-        print("Таблица 'products' создана")
-    else:
-        print("Таблица 'products' уже существует")
-    
-    conn.commit()
-    conn.close()
-
-# Вызываем инициализацию БД при старте
-init_db()
-
-# Функция для получения данных об акции
-def fetch_promo_data(promo_id):
-    # Новый адрес для локального прокси
-    internal_api_url = f'https://fastart-demo.loca.lt/fetch_promo/{promo_id}'
-    
-    try:
-        response = requests.get(internal_api_url, verify=False)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching promo data via internal proxy: {e}")
-        return None
-
-# Сохранение товаров в БД
-def save_products_to_db(products):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    
-    # Очищаем старые данные перед добавлением новых
-    cursor.execute('DELETE FROM products')
-    
-    for product in products:
-        cursor.execute('''
-            INSERT INTO products (productId, promoId, name)
-            VALUES (?, ?, ?)
-        ''', (product['productId'], product['promoId'], product['name']))
-    
-    conn.commit()
-    conn.close()
-
-# Получение товаров из БД
-def get_products_from_db():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, productId, promoId, name FROM products')
-    products = cursor.fetchall()
-    conn.close()
-    
-    return [{
-        'id': row[0],
-        'productId': row[1],
-        'promoId': row[2],
-        'name': row[3]
-    } for row in products]
+INTERNAL_API = 'http://localhost:8080'
 
 @app.route('/')
 def index():
@@ -91,35 +14,22 @@ def search():
     promo_id = request.form.get('promo_id')
     if not promo_id:
         return jsonify({'error': 'Promo ID is required'}), 400
-    
-    promo_data = fetch_promo_data(promo_id)
-    if not promo_data or 'data' not in promo_data:
-        return jsonify({'error': 'Failed to fetch promo data'}), 500
-    
-    promo_info = promo_data['data']['promo']
-    products = []
-    
-    # Извлекаем товары из групп
-    for group in promo_info.get('group', []):
-        for product in group.get('product', []):
-            products.append({
-                'productId': product['productId'],
-                'promoId': promo_info['promoId'],
-                'name': promo_info['name']
-            })
-    
-    # Сохраняем товары в БД
-    save_products_to_db(products)
-    
-    return jsonify({
-        'success': True,
-        'count': len(products)
-    })
+
+    try:
+        response = requests.get(f'{INTERNAL_API}/fetch_and_store/{promo_id}', verify=False)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/products', methods=['GET'])
-def get_products():
-    products = get_products_from_db()
-    return jsonify(products)
+def products():
+    try:
+        response = requests.get(f'{INTERNAL_API}/products', verify=False)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
