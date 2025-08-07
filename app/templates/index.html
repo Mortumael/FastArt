@@ -3,85 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Поиск товаров по акциям</title>
+    <title>Поиск товаров по акциям STAGE</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div class="container">
-    <h1>Поиск товаров по акциям</h1>
-
-    <div class="search-box">
-        <select id="promo-select">
-            <option value="">Выберите акцию</option>
-        </select>
-        <button id="search-btn">Найти товары</button>
+    <div class="container">
+        <h1>Поиск товаров по акциям STAGE</h1>
+        
+        <div class="search-box">
+            <input type="text" id="promo-id" placeholder="Введите ID акции">
+            <button id="search-btn">Найти товары</button>
+        </div>
+        
+        <div id="status-message"></div>
+        
+        <div class="results">
+            <h2>Найденные товары</h2>
+            <table id="products-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Артикул</th>
+                        <th>ID акции</th>
+                        <th>Название акции</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Товары будут загружаться здесь -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div id="status-message"></div>
-
-    <div class="results">
-        <h2>Найденные товары</h2>
-        <table id="products-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Артикул</th>
-                    <th>ID акции</th>
-                    <th>Название акции</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-async function loadPromos() {
-    const res = await fetch('/promos');
-    const promos = await res.json();
-    const select = document.getElementById('promo-select');
-    promos.forEach(promo => {
-        const option = document.createElement('option');
-        option.value = promo.promoId;
-        option.textContent = `${promo.name} (${promo.promoId})`;
-        select.appendChild(option);
-    });
-}
-
-document.getElementById('search-btn').addEventListener('click', async () => {
-    const promoId = document.getElementById('promo-select').value;
-    const statusMessage = document.getElementById('status-message');
-
-    if (!promoId) {
-        statusMessage.textContent = 'Пожалуйста, выберите акцию';
-        statusMessage.className = 'error';
-        return;
-    }
-
-    statusMessage.textContent = 'Загружаем товары...';
-    statusMessage.className = 'info';
-
-    const res = await fetch(`/products/${promoId}`);
-    const products = await res.json();
-
-    const tableBody = document.querySelector('#products-table tbody');
-    tableBody.innerHTML = '';
-    products.forEach(product => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${product.id}</td>
-            <td>${product.productId}</td>
-            <td>${product.promoId}</td>
-            <td>${product.name}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-
-    statusMessage.textContent = `Найдено ${products.length} товаров`;
-    statusMessage.className = 'success';
-});
-
-document.addEventListener('DOMContentLoaded', loadPromos);
-</script>
+    <script>
+        document.getElementById('search-btn').addEventListener('click', async () => {
+            const promoId = document.getElementById('promo-id').value.trim();
+            const statusMessage = document.getElementById('status-message');
+            
+            if (!promoId) {
+                statusMessage.textContent = 'Пожалуйста, введите ID акции';
+                statusMessage.className = 'error';
+                return;
+            }
+            
+            statusMessage.textContent = 'Ищем товары...';
+            statusMessage.className = 'info';
+            
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `promo_id=${encodeURIComponent(promoId)}`
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    statusMessage.textContent = data.error;
+                    statusMessage.className = 'error';
+                } else {
+                    statusMessage.textContent = `Найдено ${data.count} товаров`;
+                    statusMessage.className = 'success';
+                    loadProducts();
+                }
+            } catch (error) {
+                statusMessage.textContent = 'Ошибка при выполнении запроса';
+                statusMessage.className = 'error';
+                console.error(error);
+            }
+        });
+        
+        async function loadProducts() {
+            try {
+                const response = await fetch('/products');
+                const products = await response.json();
+                
+                const tableBody = document.querySelector('#products-table tbody');
+                tableBody.innerHTML = '';
+                
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.id}</td>
+                        <td>${product.productId}</td>
+                        <td>${product.promoId}</td>
+                        <td>${product.name}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Ошибка при загрузке товаров:', error);
+            }
+        }
+        
+        // Загружаем товары при загрузке страницы
+        document.addEventListener('DOMContentLoaded', loadProducts);
+    </script>
 </body>
 </html>
