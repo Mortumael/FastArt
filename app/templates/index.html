@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск артикулов по акциям</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Поиск артикулов по акциям</h1>
+        
+        <form id="searchForm">
+            <div class="form-group">
+                <label for="promo">Выберите акцию:</label>
+                <select id="promo" name="promo" required>
+                    <option value="">-- Выберите акцию --</option>
+                    {% for promo in promotions %}
+                    <option value="{{ promo.promoId }}">{{ promo.name }} (ID: {{ promo.promoId }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+       <div class="form-group"> 
+                <label for="search_term">Название или артикул товара:</label>
+                <input type="text" id="search_term" name="search_term" required placeholder="Введите название или артикул">
+            </div>
+              
+            <button type="submit">Найти</button>
+        </form>
+        
+        <div id="results" class="results-container">
+            <!-- Результаты будут загружены здесь через AJAX -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const promo = document.getElementById('promo').value;
+            const searchTerm = document.getElementById('search_term').value;
+            
+            fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `promo=${encodeURIComponent(promo)}&search_term=${encodeURIComponent(searchTerm)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('results');
+                
+                if (data.error) {
+                    resultsDiv.innerHTML = `<div class="error">${data.error}</div>`;
+                    return;
+                }
+                
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = '<div class="no-results">Товары не найдены</div>';
+                    return;
+                }
+                
+                let html = '<h2>Результаты поиска</h2>';
+                html += '<table><tr><th>ID</th><th>Артикул</th><th>Акция</th></tr>';
+                
+                data.forEach(item => {
+                    html += `<tr>
+                        <td>${item.id}</td>
+                        <td>${item.articul}</td>
+                        <td>${item.promo}</td>
+                    </tr>`;
+                });
+                
+                html += '</table>';
+                resultsDiv.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('results').innerHTML = 
+                    '<div class="error">Произошла ошибка при поиске</div>';
+            });
+        });
+    </script>
+</body>
+</html>
