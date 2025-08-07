@@ -39,8 +39,8 @@ init_db()
 
 # Функция для получения данных об акции
 def fetch_promo_data(promo_id):
-    # Обрати внимание: сюда вставляешь свой ngrok-URL
-    internal_api_url = f'https:9222a13bb50c.ngrok-free.app/fetch_promo/{promo_id}'
+    # Новый адрес для локального прокси
+    internal_api_url = f'https://fastart-demo.loca.lt/fetch_promo/{promo_id}'
     
     try:
         response = requests.get(internal_api_url, verify=False)
