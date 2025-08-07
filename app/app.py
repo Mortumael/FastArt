@@ -3,7 +3,7 @@ import requests
 
 app = Flask(__name__)
 
-INTERNAL_API = 'http://localhost:8080'
+INTERNAL_API = 'internal_api_url = f'https://fastart-demo.loca.lt/fetch_and_store/{promo_id}''
 
 @app.route('/')
 def index():
