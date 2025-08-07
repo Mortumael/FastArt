@@ -52,9 +52,15 @@ def fetch_promo_data(promo_id):
         'Accept-Charset': 'UTF-8',
         'Authorization': 'Bearer'
     }
-    
+
+    # Прокси через VPN
+    proxies = {
+        'http': 'https://f33224e08083.ngrok-free.app',
+        'https': 'https://f33224e08083.ngrok-free.app'
+    }
+
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, proxies=proxies, verify=False)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
