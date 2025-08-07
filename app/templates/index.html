@@ -1,105 +1,134 @@
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Поиск товаров по акциям STAGE</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-    <div class="container">
-        <h1>Поиск товаров по акциям STAGE</h1>
-        
-        <div class="search-box">
-            <input type="text" id="promo-id" placeholder="Введите ID акции">
-            <button id="search-btn">Найти товары</button>
-        </div>
-        
-        <div id="status-message"></div>
-        
-        <div class="results">
-            <h2>Найденные товары</h2>
-            <table id="products-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Артикул</th>
-                        <th>ID акции</th>
-                        <th>Название акции</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Товары будут загружаться здесь -->
-                </tbody>
-            </table>
-        </div>
+<div class="container">
+    <h1>Поиск товаров по акциям STAGE</h1>
+
+    <div class="search-box">
+        <select id="promo-id">
+            <option value="">Загрузка акций...</option>
+        </select>
+        <button id="search-btn">Найти товары</button>
     </div>
 
-    <script>
-        document.getElementById('search-btn').addEventListener('click', async () => {
-            const promoId = document.getElementById('promo-id').value.trim();
-            const statusMessage = document.getElementById('status-message');
-            
-            if (!promoId) {
-                statusMessage.textContent = 'Пожалуйста, введите ID акции';
-                statusMessage.className = 'error';
+    <div id="status-message"></div>
+
+    <div class="results">
+        <h2>Найденные товары</h2>
+        <table id="products-table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Артикул</th>
+                <th>ID акции</th>
+                <th>Название акции</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Товары будут загружаться здесь -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function loadPromos() {
+        const select = document.getElementById('promo-id');
+        select.innerHTML = '<option value="">Загружаю...</option>';
+        try {
+            const resp = await fetch('/promos');
+            const data = await resp.json();
+
+            // Если вернулась ошибка
+            if (data.error) {
+                select.innerHTML = '<option value="">Ошибка загрузки</option>';
+                console.error('promos error', data);
                 return;
             }
-            
-            statusMessage.textContent = 'Ищем товары...';
-            statusMessage.className = 'info';
-            
-            try {
-                const response = await fetch('/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `promo_id=${encodeURIComponent(promoId)}`
-                });
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    statusMessage.textContent = data.error;
-                    statusMessage.className = 'error';
-                } else {
-                    statusMessage.textContent = `Найдено ${data.count} товаров`;
-                    statusMessage.className = 'success';
-                    loadProducts();
-                }
-            } catch (error) {
-                statusMessage.textContent = 'Ошибка при выполнении запроса';
-                statusMessage.className = 'error';
-                console.error(error);
-            }
-        });
-        
-        async function loadProducts() {
-            try {
-                const response = await fetch('/products');
-                const products = await response.json();
-                
-                const tableBody = document.querySelector('#products-table tbody');
-                tableBody.innerHTML = '';
-                
-                products.forEach(product => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${product.id}</td>
-                        <td>${product.productId}</td>
-                        <td>${product.promoId}</td>
-                        <td>${product.name}</td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            } catch (error) {
-                console.error('Ошибка при загрузке товаров:', error);
-            }
+
+            select.innerHTML = '<option value="">-- Выберите акцию --</option>';
+            data.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.promoId;
+                opt.textContent = `${p.promoId} — ${p.name}`;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            select.innerHTML = '<option value="">Ошибка загрузки</option>';
+            console.error(e);
         }
-        
-        // Загружаем товары при загрузке страницы
-        document.addEventListener('DOMContentLoaded', loadProducts);
-    </script>
+    }
+
+    document.getElementById('search-btn').addEventListener('click', async () => {
+        const select = document.getElementById('promo-id');
+        const promoId = select.value;
+        const statusMessage = document.getElementById('status-message');
+
+        if (!promoId) {
+            statusMessage.textContent = 'Пожалуйста, выберите акцию';
+            statusMessage.className = 'error';
+            return;
+        }
+
+        statusMessage.textContent = 'Ищем товары...';
+        statusMessage.className = 'info';
+
+        try {
+            const resp = await fetch('/search', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `promo_id=${encodeURIComponent(promoId)}`
+            });
+            const data = await resp.json();
+
+            if (data.error) {
+                statusMessage.textContent = data.error;
+                statusMessage.className = 'error';
+            } else {
+                statusMessage.textContent = `Найдено ${data.count} товаров`;
+                statusMessage.className = 'success';
+                loadProducts();
+            }
+        } catch (e) {
+            statusMessage.textContent = 'Ошибка при выполнении запроса';
+            statusMessage.className = 'error';
+            console.error(e);
+        }
+    });
+
+    async function loadProducts() {
+        try {
+            const resp = await fetch('/products');
+            const products = await resp.json();
+            const tableBody = document.querySelector('#products-table tbody');
+            tableBody.innerHTML = '';
+
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.productId}</td>
+                    <td>${product.promoId}</td>
+                    <td>${product.name}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (e) {
+            console.error('Ошибка при загрузке товаров:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadPromos();
+        loadProducts();
+    });
+</script>
 </body>
 </html>

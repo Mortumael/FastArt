@@ -1,52 +1,45 @@
+# app.py (для Render)
+from flask import Flask, render_template, request, jsonify
+import requests
+import os
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 
-INTERNAL_API = 'internal_api_url = f'https://fastart-demo.loca.lt/fetch_and_store/{promo_id}''
-# Базовый URL без конкретных методов
-INTERNAL_API_BASE = "https://fastart-demo.loca.lt"
+# сюда поставить публичный адрес твоего localtunnel (или адрес internal_api, если развернёшь в облаке)
+INTERNAL_API_BASE = os.environ.get('INTERNAL_API_BASE', 'https://fastart-demo.loca.lt')
 
-def fetch_promo_data(promo_id):
-    url = f"{INTERNAL_API_BASE}/fetch_and_store/{promo_id}"
+REQUEST_TIMEOUT = 20
+
+def call_internal(path):
+    url = INTERNAL_API_BASE.rstrip('/') + path
     try:
-        response = requests.get(url, verify=False)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        return {'error': str(e)}
-
-def fetch_products():
-    url = f"{INTERNAL_API_BASE}/products"
-    try:
-        response = requests.get(url, verify=False)
-        response.raise_for_status()
-        return response.json()
+        resp = requests.get(url, timeout=REQUEST_TIMEOUT, verify=False)
+        resp.raise_for_status()
+        return resp.json()
     except Exception as e:
         return {'error': str(e)}
 
 @app.route('/')
 def index():
-@@ -14,22 +33,11 @@ def search():
+    return render_template('index.html')
+
+@app.route('/promos', methods=['GET'])
+def promos():
+    res = call_internal('/promos')
+    return jsonify(res)
+
+@app.route('/search', methods=['POST'])
+def search():
     promo_id = request.form.get('promo_id')
     if not promo_id:
         return jsonify({'error': 'Promo ID is required'}), 400
-
-    try:
-        response = requests.get(f'{INTERNAL_API}/fetch_and_store/{promo_id}', verify=False)
-        response.raise_for_status()
-        return jsonify(response.json())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    return jsonify(fetch_promo_data(promo_id))
+    res = call_internal(f'/fetch_and_store/{promo_id}')
+    return jsonify(res)
 
 @app.route('/products', methods=['GET'])
 def products():
-    try:
-        response = requests.get(f'{INTERNAL_API}/products', verify=False)
-        response.raise_for_status()
-        return jsonify(response.json())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    return jsonify(fetch_products())
+    res = call_internal('/products')
+    return jsonify(res)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
