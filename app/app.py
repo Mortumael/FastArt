@@ -40,7 +40,7 @@ init_db()
 # Функция для получения данных об акции
 def fetch_promo_data(promo_id):
     # Обрати внимание: сюда вставляешь свой ngrok-URL
-    internal_api_url = f'https://https://8c26571cdb23.ngrok-free.app/fetch_promo/{promo_id}'
+    internal_api_url = f'https:9222a13bb50c.ngrok-free.app/fetch_promo/{promo_id}'
     
     try:
         response = requests.get(internal_api_url, verify=False)
