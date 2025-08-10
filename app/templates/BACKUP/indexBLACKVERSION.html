@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Товары акции</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+        th { background: #eee; }
+    </style>
+</head>
+<body>
+    <h1>Товары акции</h1>
+    <button onclick="loadProducts()">Загрузить</button>
+    <table id="productsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>ProductId</th>
+                <th>PromoId</th>
+                <th>Name</th>
+                <th>Best Price</th>
+                <th>Main Group</th>
+                <th>Second Group</th>
+                <th>Remain</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        function loadProducts() {
+            fetch('/load_products')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.querySelector('#productsTable tbody');
+                    tbody.innerHTML = '';
+                    data.forEach(p => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${p.id}</td>
+                                <td>${p.productId}</td>
+                                <td>${p.promoId}</td>
+                                <td>${p.name}</td>
+                                <td>${p.isBestPrice ? 'Да' : 'Нет'}</td>
+                                <td>${p.productGroupMainName || ''}</td>
+                                <td>${p.productGroupSecondName || ''}</td>
+                                <td>${p.remainQuantity ?? ''}</td>
+                                <td>${p.price ?? ''}</td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(err => console.error(err));
+        }
+    </script>
+</body>
+</html>
